@@ -1,0 +1,122 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.mapper.UserDepartmentMapper">
+
+	<sql id="fields">
+			userId,uid,performance,teamPerformance,grade,parentUserId,nickName,createTime,updateTime,status,remark
+	</sql>
+
+	<sql id="fields_id">
+		id,<include refid="fields"/>
+	</sql>
+
+	<sql id="table_name">base_user_department</sql>
+
+	<sql id="selector">
+		select <include refid="fields_id"/> from <include refid="table_name"/>
+	</sql>
+
+	<sql id="condition">
+		<where>
+			<if test="model.userId != null and model.userId != ''">userId=#{model.userId}</if>
+			<if test="model.uid != null">and uid=#{model.uid}</if>
+			<if test="model.performance != null">and performance=#{model.performance}</if>
+			<if test="model.status != null">and status=#{model.status}</if>
+			<if test="model.remark != null and model.remark != ''">and remark=#{model.remark}</if>
+			<if test="model.grade != null and model.grade != ''">and grade=#{model.grade}</if>
+
+		</where>
+	</sql>
+
+	<insert id="create" useGeneratedKeys="true" keyProperty="id">
+		insert into <include refid="table_name"/>(<include refid="fields_id"/>)
+		values(#{id},#{userId},#{uid},#{performance},#{teamPerformance},#{grade},#{parentUserId},#{nickName},now(),now(),#{status},#{remark});
+	</insert>
+
+	<select id="readById" resultType="UserDepartment">
+		<include refid="selector"/> where id=#{id}  limit 1;
+	</select>
+
+	<select id="readList" resultType="UserDepartment">
+		<include refid="selector"/> <include refid="condition"/> limit #{startRow}, #{pageSize};
+	</select>
+
+	<select id="readOne" resultType="UserDepartment">
+		<include refid="selector"/> <include refid="condition"/> limit 1;
+	</select>
+
+	<select id="readCount" resultType="int">
+		select count(1) from <include refid="table_name"/> <include refid="condition"/>
+	</select>
+
+	<update id="updateById">
+		update <include refid="table_name"/>
+		<set>
+			<if test="model.userId != null and model.userId !=''">userId= #{model.userId},</if>
+			<if test="model.uid != null">uid= #{model.uid},</if>
+			<if test="model.performance != null">performance= #{model.performance},</if>
+			<if test="model.teamPerformance != null">teamPerformance= #{model.teamPerformance},</if>
+			<if test="model.status != null and model.status !=0">status= #{model.status},</if>
+			<if test="model.remark != null and model.remark !=''">remark= #{model.remark},</if>
+			<if test="model.grade != null and model.grade !=0">grade= #{model.grade},</if>
+			updateTime=now()
+		</set>
+		where id=#{id}
+	</update>
+
+	<update id="deleteById">
+		update <include refid="table_name"/> set status = 0,updateTime=now() where id = #{id}
+	</update>
+
+	<select id="getDirectTeamList" resultType="UserDepartment">
+		<!--select a.id,a.userId,a.uid,a.performance,a.teamPerformance,a.createTime,a.updateTime,a.status,a.remark,a.parentUserId,a.nickName-->
+		  <!--from <include refid="table_name"/> as a-->
+		<!--INNER JOIN base_user as b on a.userId = b.id and a.parentUserId = #{parentUserId}  and   a.parentUserId=#{parentUserId}-->
+		<!--order by a.performance desc-->
+        select id,userId,uid,performance,teamPerformance,createTime,updateTime,status,remark,parentUserId,nickName from <include refid="table_name"/>    where parentUserId=#{parentUserId}  order by performance desc
+	</select>
+
+	<select id="getDirectMaxGradeList" resultType="UserDepartment">
+		<include refid="selector"/>  where parentUserId=#{parentUserId}  and grade >0  ORDER BY grade desc LIMIT 3;
+	</select>
+
+	<select id="getSumAmt" resultType="java.lang.Double">
+		select sum(performance) sumAmt from <include refid="table_name"/> as a
+		INNER JOIN base_user as b on a.userId = b.id and a.parentUserId = #{parentUserId} and b.contactUserId = a.parentUserId and a.status = 1
+	</select>
+
+    <select id="getSumDeparmentPerformanceByParentUserId" resultType="java.lang.Double">
+        select SUM(performance) sumAmt from <include refid="table_name"/>  WHERE parentUserId=#{parentUserId};
+    </select>
+
+
+    <select id="getMaxGrade" resultType="java.lang.Integer">
+		select max(b.grade) from <include refid="table_name"/> as a
+		INNER JOIN base_user as b on a.userId = b.id and a.parentUserId = #{parentUserId} and a.status = 1 and b.grade >3
+		GROUP BY b.grade HAVING (count(1)>=3)
+	</select>
+
+	<update id="updatePerformanceByUserId">
+		update <include refid="table_name"/> set performance = performance + #{performance},updateTime=now() where userId = #{userId} and (performance + #{performance})>0
+	</update>
+
+	<update id="updateTeamPerformanceByUserId">
+		update <include refid="table_name"/> set teamPerformance = teamPerformance + #{teamPerformance},updateTime=now() where userId = #{userId} and (teamPerformance + #{teamPerformance})>0
+	</update>
+
+	<update id="updateDeparmentAndTeamPerformanceByUserId">
+		update <include refid="table_name"/> set teamPerformance = teamPerformance + #{teamPerformance},performance = performance + #{performance},updateTime=now() where userId = #{userId} and (teamPerformance + #{teamPerformance})>0
+	</update>
+
+	<select id="getAll" resultType="UserDepartment">
+		<include refid="selector"/> WHERE parentUserId=#{parentUserId}  ORDER BY performance DESC  ;
+	</select>
+
+	<select id="getAllUserDepartment" resultType="UserDepartment">
+		<include refid="selector"/> ORDER BY performance DESC  ;
+	</select>
+</mapper>
+
+
+

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<no_authorized>
+	<url>/login/token</url>
+	<url>/login/loginIn</url>
+	<url>/common/pic64code</url>
+	<url>/common/sendSms</url>
+	<url>/user/forgetPwd</url>
+	<url>/cardgrade/info</url>
+	<url>/cardgrade/list</url>
+	<url>/share/shareregister</url>
+
+
+	<url>/app/handle</url>
+	<url>/order/add</url>
+	<url>/app/up</url>
+	<url>/app/differ</url>
+	<url>/app/push</url>
+	<url>/app/concat</url>
+	<url>/app/performance</url>
+	<url>/app/clear</url>
+	<url>/app/wallet</url>
+	<url>/register.html</url>
+
+	<!-- 静态资源-->
+	<url>/resources</url>
+	<url>/download</url>
+</no_authorized>
+
+
+
+

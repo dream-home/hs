@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="com.mapper.TradeOrderMapper">
+
+    <sql id="fields">
+        orderNo,sendUserId,receviceUserId,amt,confirmAmt,poundage,source,pushFirstReferrerScale,pushSecondReferrerScale,equityAmtScale,payAmtScale,tradeAmtScale,cardGrade,taskCycle,signCycle,createTime,updateTime,status,remark
+    </sql>
+
+    <sql id="fields_id">
+        id,<include refid="fields"/>
+    </sql>
+
+    <sql id="table_name">trade_order</sql>
+
+    <sql id="selector">
+        select <include refid="fields_id"/> from <include refid="table_name"/>
+    </sql>
+
+    <sql id="condition">
+        <where>
+            <if test="model.orderNo != null and model.orderNo != ''">orderNo=#{model.orderNo}</if>
+            <if test="model.sendUserId != null and model.sendUserId != ''">and sendUserId=#{model.sendUserId}</if>
+            <if test="model.receviceUserId != null and model.receviceUserId != ''">and receviceUserId=#{model.receviceUserId}</if>
+            <if test="model.amt != null">and amt=#{model.amt}</if>
+            <if test="model.confirmAmt != null">and confirmAmt=#{model.confirmAmt}</if>
+            <if test="model.poundage != null">and poundage=#{model.poundage}</if>
+            <if test="model.source != null">and source=#{model.source}</if>
+            <if test="model.pushFirstReferrerScale != null">and pushFirstReferrerScale=#{model.pushFirstReferrerScale}</if>
+            <if test="model.pushSecondReferrerScale != null">and pushSecondReferrerScale=#{model.pushSecondReferrerScale}</if>
+            <if test="model.equityAmtScale != null">and equityAmtScale=#{model.equityAmtScale}</if>
+            <if test="model.payAmtScale != null">and payAmtScale=#{model.payAmtScale}</if>
+            <if test="model.tradeAmtScale != null">and tradeAmtScale=#{model.tradeAmtScale}</if>
+            <if test="model.cardGrade != null">and cardGrade=#{model.cardGrade}</if>
+            <if test="model.taskCycle != null">and taskCycle=#{model.taskCycle}</if>
+            <if test="model.signCycle != null">and signCycle=#{model.signCycle}</if>
+            <if test="model.status != null">and status=#{model.status}</if>
+            <if test="model.remark != null and model.remark != ''">and remark=#{model.remark}</if>
+        </where>
+    </sql>
+
+    <insert id="create" useGeneratedKeys="true" keyProperty="id">
+        insert into <include refid="table_name"/>(<include refid="fields_id"/>)
+        values(#{id},#{orderNo},#{sendUserId},#{receviceUserId},#{amt},#{confirmAmt},#{poundage},#{source},#{pushFirstReferrerScale},#{pushSecondReferrerScale},#{equityAmtScale},#{payAmtScale},#{tradeAmtScale},#{cardGrade},#{taskCycle},#{signCycle},now(),now(),#{status},#{remark});
+    </insert>
+
+    <select id="readById" resultType="com.model.TradeOrder">
+        <include refid="selector"/> where id=#{id}  limit 1;
+    </select>
+
+    <select id="readList" resultType="com.model.TradeOrder">
+        <include refid="selector"/> <include refid="condition"/>  ORDER BY createTime asc limit #{startRow}, #{pageSize};
+    </select>
+
+    <select id="readOne" resultType="com.model.TradeOrder">
+        <include refid="selector"/> <include refid="condition"/> ORDER BY createTime DESC   limit 1;
+    </select>
+
+    <select id="readWaitHandleList" resultType="com.model.TradeOrder">
+        <include refid="selector"/>   where `status`=1 and source IN(1,7,8) ORDER BY createTime asc limit #{startRow}, #{pageSize};
+    </select>
+
+    <select id="readWaitHandleCount" resultType="Integer">
+        select count(1) from <include refid="table_name"/>     where `status`=1 and source IN(1,7,8)
+    </select>
+
+    <select id="readRewardList" resultType="com.model.TradeOrder">
+        SELECT * FROM trade_order
+        <where>
+            1=1  AND  source in(2,3,4,5) AND   taskCycle>0 and signCycle>0 and `status`=2
+            <!--<if test="taskTime != null">-->
+                <!--AND createTime &lt;= #{taskTime}-->
+            <!--</if>-->
+            <if test="userId != null">
+                AND receviceUserId = #{userId}
+            </if>
+            limit #{startRow}, #{pageSize};
+        </where>
+    </select>
+
+    <select id="readCount" resultType="Integer">
+        SELECT COUNT(id) from <include refid="table_name"/> <include refid="condition"/>
+    </select>
+
+    <select id="readSumDynamicProfitsCount" resultType="Double">
+        select  SUM(confirmAmt)  from <include refid="table_name"/> WHERE  taskCycle=0 and signCycle=0 AND receviceUserId=#{userId}
+        <if test="list != null">
+            AND  source in    <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+        </if>
+    </select>
+
+
+
+    <!-- 待领取的奖励 -->
+    <select id="readWaiteSumDynamicProfitsCountByReceviceUserIdAndSourceAndStatus" resultType="Double">
+        SELECT   SUM(signCycle*confirmAmt/#{signCycle})  FROM <include refid="table_name"/>    where   source =#{source} AND  receviceUserId=#{userId}  AND  taskCycle>0 and signCycle>0 and  status=2
+    </select>
+
+    <!-- 已经领取完成的奖励 -->
+    <select id="readHasAllCompeleteSumDynamicProfitsCountByReceviceUserIdAndSourceAndStatus" resultType="Double">
+        SELECT   SUM(confirmAmt)  FROM <include refid="table_name"/>    where   source =#{source} AND  receviceUserId=#{userId}  AND  taskCycle=0 and signCycle=0 and  status=3
+    </select>
+
+    <!-- 还在做任务中已经领取的部分奖励 -->
+    <select id="readHasPartCompeleteSumDynamicProfitsCountByReceviceUserIdAndSourceAndStatus" resultType="Double">
+        SELECT   SUM(confirmAmt-signCycle*confirmAmt/#{signCycle})  FROM <include refid="table_name"/>    where   source =#{source} AND  receviceUserId=#{userId}  AND  taskCycle>0 and signCycle>0 and  status=2
+    </select>
+
+    <update id="updateById">
+        update <include refid="table_name"/>
+        <set>
+            <if test="model.orderNo != null and model.orderNo !=''">orderNo= #{model.orderNo},</if>
+            <if test="model.sendUserId != null and model.sendUserId !=''">sendUserId= #{model.sendUserId},</if>
+            <if test="model.receviceUserId != null and model.receviceUserId !=''">receviceUserId= #{model.receviceUserId},</if>
+            <if test="model.amt != null">amt= #{model.amt},</if>
+            <if test="model.confirmAmt != null">confirmAmt= #{model.confirmAmt},</if>
+            <if test="model.poundage != null">poundage= #{model.poundage},</if>
+            <if test="model.source != null">source= #{model.source},</if>
+            <if test="model.pushFirstReferrerScale != null">pushFirstReferrerScale= #{model.pushFirstReferrerScale},</if>
+            <if test="model.pushSecondReferrerScale != null">pushSecondReferrerScale= #{model.pushSecondReferrerScale},</if>
+            <if test="model.equityAmtScale != null">equityAmtScale= #{model.equityAmtScale},</if>
+            <if test="model.payAmtScale != null">payAmtScale= #{model.payAmtScale},</if>
+            <if test="model.tradeAmtScale != null">tradeAmtScale= #{model.tradeAmtScale},</if>
+            <if test="model.cardGrade != null">cardGrade= #{model.cardGrade},</if>
+            <if test="model.taskCycle != null">taskCycle= #{model.taskCycle},</if>
+            <if test="model.signCycle != null">signCycle= #{model.signCycle},</if>
+            <if test="model.status != null">status= #{model.status},</if>
+            <if test="model.remark != null and model.remark !=''">remark= #{model.remark},</if>
+            updateTime=now()
+        </set>
+        where id=#{id}
+    </update>
+
+    <update id="deleteById">
+        update <include refid="table_name"/> set status = 4,updateTime=now() where id = #{id}
+    </update>
+
+    <update id="batchUpdateTaskCycle">
+        UPDATE
+        <include refid="table_name"/>
+        SET taskCycle = taskCycle-1
+        where id in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+    </update>
+
+    <update id="batchUpdateSignCycle">
+        UPDATE
+        <include refid="table_name"/>
+        SET signCycle = signCycle-1
+        where id in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+    </update>
+
+    <update id="batchUpdateTaskCycleDefault">
+        UPDATE
+        <include refid="table_name"/>
+        SET taskCycle = #{taskCycle},signCycle = signCycle-1
+        where id in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+    </update>
+
+
+    <update id="batchUpdateOrderStatus">
+        UPDATE
+        <include refid="table_name"/>
+        SET status = 3
+        where id in
+        <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+    </update>
+
+    <select id="readRewardListByOrderType" resultType="com.model.TradeOrder">
+        select <include refid="fields_id"/> from <include refid="table_name"/>
+        <where>
+            1=1
+            <if test="userId != null">
+                AND receviceUserId = #{userId}
+            </if>
+            <if test="list != null">
+                AND  source in    <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+            </if>
+            ORDER BY createTime desc  limit #{startRow}, #{pageSize};
+        </where>
+    </select>
+
+    <select id="readRewardCountByOrderType" resultType="Integer">
+        select count(1) from <include refid="table_name"/>
+            <where>
+                1=1
+                <if test="userId != null">
+                    AND receviceUserId = #{userId}
+                </if>
+                <if test="list != null">
+                    AND  source in    <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+                </if>
+          </where>
+    </select>
+
+    <select id="sumReadRewardByOrderType" resultType="Double">
+        select SUM(confirmAmt) from <include refid="table_name"/>
+        <where>
+            1=1
+            <if test="userId != null">
+                AND receviceUserId = #{userId}
+            </if>
+            <if test="list != null">
+                AND  source in    <foreach collection="list" index="index" item="item" open="(" separator="," close=")"> #{item} </foreach>
+            </if>
+        </where>
+    </select>
+</mapper>
